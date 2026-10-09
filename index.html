@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>موسيقى الكروان | Yassin El-Karawan</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#FF007A">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(() => console.log('Service Worker Registered'))
+                    .catch(err => console.log('SW registration skipped or file missing'));
+            });
+        }
+    </script>
+
+    <style>
+        :root {
+            --bg-dark: #06070B;
+            --bg-card: rgba(22, 24, 38, 0.55);
+            --neon-pink: #FF007A;
+            --neon-purple: #7000FF;
+            --neon-cyan: #00F5D4;
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #FFFFFF;
+            --text-muted: #8E95A5;
+            --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --transition-smooth: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            --transition-bounce: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+        body { 
+            font-family: var(--font-family); 
+            background-color: var(--bg-dark); 
+            color: var(--text-main); 
+            overflow: hidden; 
+            height: 100vh; 
+            height: 100dvh; 
+            position: relative;
+        }
+
+        svg { width: 1.2em; height: 1.2em; fill: currentColor; vertical-align: middle; pointer-events: none; }
+
+        .ambient-bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+        .orb { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.45; transition: transform 0.1s ease-out, background 0.8s ease; animation: floatGlow 10s infinite alternate ease-in-out; }
+        .orb-1 { width: 320px; height: 320px; background: var(--neon-purple); top: -50px; right: -50px; }
+        .orb-2 { width: 380px; height: 380px; background: var(--neon-pink); bottom: -100px; left: -80px; animation-delay: -5s; }
+        .orb-3 { width: 250px; height: 250px; background: var(--neon-cyan); top: 40%; left: 30%; animation-delay: -2s; opacity: 0.25; }
+
+        @keyframes floatGlow {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(30px, 40px) scale(1.15); }
+        }
+
+        .glass-panel { 
+            background: var(--bg-card); 
+            backdrop-filter: blur(25px); 
+            -webkit-backdrop-filter: blur(25px); 
+            border: 1px solid var(--glass-border); 
+            border-radius: 24px; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        h1, h2, h3 { font-weight: 900; letter-spacing: -0.5px; }
+        .text-glow { color: var(--text-main); text-shadow: 0 0 12px rgba(255, 255, 255, 0.3); }
+        .text-accent { background: linear-gradient(135deg, var(--neon-cyan), var(--neon-pink)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        .btn-glow { 
+            background: linear-gradient(135deg, var(--neon-pink), var(--neon-purple)); 
+            border: none; color: white; padding: 14px 28px; font-size: 1.05rem; font-family: var(--font-family); font-weight: 700; border-radius: 50px; cursor: pointer; box-shadow: 0 8px 25px rgba(255, 0, 122, 0.4); transition: var(--transition-bounce); display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .btn-glow:active { transform: scale(0.93); box-shadow: 0 4px 15px rgba(255, 0, 122, 0.3); }
+
+        .modal-overlay { 
+            position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(10px); z-index: 2000; display: flex; justify-content: center; align-items: flex-end; opacity: 0; pointer-events: none; transition: var(--transition-smooth); 
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .dsp-panel { 
+            width: 100%; padding: 30px 25px 40px 25px; border-radius: 36px 36px 0 0; background: rgba(15, 17, 26, 0.95); border-top: 1px solid var(--neon-pink); transform: translateY(100%); transition: var(--transition-smooth); box-shadow: 0 -10px 40px rgba(255,0,122,0.2);
+        }
+        .modal-overlay.active .dsp-panel { transform: translateY(0); }
+        .dsp-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        
+        .dsp-control { margin-bottom: 22px; }
+        .dsp-label { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.9rem; color: var(--neon-cyan); font-weight: 700;}
+        .dsp-slider { -webkit-appearance: none; width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; outline: none; }
+        .dsp-slider::-webkit-slider-thumb { 
+            -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--neon-cyan); cursor: pointer; box-shadow: 0 0 12px var(--neon-cyan); transition: transform 0.2s;
+        }
+
+        #app-views { position: relative; width: 100vw; height: 100vh; height: 100dvh; overflow: hidden; z-index: 1; }
+        .view-screen { position: absolute; inset: 0; width: 100%; height: 100%; overflow-y: auto; }
+
+        #home-view { z-index: 1; padding-bottom: 30px; }
+        .hero-header { position: relative; padding: 50px 25px 25px 25px; display: flex; align-items: flex-end; background: linear-gradient(to bottom, rgba(112, 0, 255, 0.2), transparent); }
+        .hero-content { position: relative; z-index: 2; width: 100%; }
+        .artist-badge { background: rgba(255, 0, 122, 0.15); border: 1px solid rgba(255, 0, 122, 0.3); color: var(--neon-pink); padding: 6px 14px; border-radius: 30px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 12px; }
+        .action-buttons { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+        
+        .track-list { padding: 10px 20px 100px 20px; }
+        .track-item { 
+            display: flex; align-items: center; padding: 14px 18px; margin-bottom: 12px; transition: var(--transition-bounce); cursor: pointer; user-select: none; animation: fadeInUp 0.5s ease forwards; position: relative;
+        }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .track-item:active { transform: scale(0.96); background: rgba(255,255,255,0.08); }
+        .track-icon { width: 48px; height: 48px; border-radius: 16px; background: linear-gradient(135deg, var(--neon-pink), var(--neon-purple)); display: flex; justify-content: center; align-items: center; margin-left: 15px; flex-shrink: 0; box-shadow: 0 5px 15px rgba(255, 0, 122, 0.3); }
+        .track-info { flex-grow: 1; overflow: hidden; }
+        .track-title { font-size: 1rem; font-weight: 700; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; }
+        .track-artist { font-size: 0.8rem; color: var(--text-muted); }
+        
+        .delete-btn { background: transparent; border: none; color: #ff4757; padding: 8px; cursor: pointer; opacity: 0.7; transition: opacity 0.2s; margin-right: 8px; }
+        .delete-btn:hover { opacity: 1; }
+
+        #player-view { 
+            z-index: 10; background: rgba(10, 11, 16, 0.88); backdrop-filter: blur(35px); -webkit-backdrop-filter: blur(35px); transform: translateY(100%); transition: transform 0.45s cubic-bezier(0.32, 0.72, 0, 1); display: flex; flex-direction: column; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.15); box-shadow: 0 -20px 50px rgba(0,0,0,0.8);
+        }
+        #player-view.active { transform: translateY(0); }
+
+        .drag-handle-container { width: 100%; padding: 12px 0 6px 0; cursor: grab; }
+        .drag-handle { width: 42px; height: 5px; background: rgba(255,255,255,0.3); border-radius: 10px; margin: 0 auto; }
+
+        .player-header { display: flex; justify-content: space-between; padding: 0 20px 10px 20px; align-items: center; }
+        .icon-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: white; cursor: pointer; width: 45px; height: 45px; border-radius: 50%; display: flex; justify-content: center; align-items: center; transition: var(--transition-bounce); flex-shrink: 0; }
+        .icon-btn:active { transform: scale(0.85); background: rgba(255,255,255,0.2); }
+        .icon-btn.extra-btn.active { color: var(--neon-cyan); border-color: var(--neon-cyan); box-shadow: 0 0 15px rgba(0, 245, 212, 0.4); }
+
+        .filter-btn { background: rgba(0, 245, 212, 0.1); border: 1px solid var(--neon-cyan); color: var(--neon-cyan); padding: 8px 18px; border-radius: 20px; cursor: pointer; font-family: var(--font-family); font-weight: bold; display: inline-flex; align-items: center; gap: 8px; font-size: 0.85rem; transition: var(--transition-smooth); margin: 0 auto 10px auto; }
+
+        .vinyl-container { display: flex; justify-content: center; align-items: center; flex-grow: 1; margin: 10px 0; position: relative; touch-action: pan-y; }
+        
+        .vinyl-disc { 
+            width: 230px; height: 230px; border-radius: 50%; background: repeating-radial-gradient(#0e0f15, #0e0f15 6px, #1a1c27 7px, #0e0f15 9px); box-shadow: 0 20px 50px rgba(0,0,0,0.9), 0 0 30px rgba(255, 0, 122, 0.25); display: flex; justify-content: center; align-items: center; border: 4px solid rgba(255,255,255,0.12); position: relative; will-change: transform, box-shadow; transition: border-color 0.5s ease;
+        }
+        .vinyl-disc::before { content: ''; position: absolute; inset: -12px; border-radius: 50%; border: 2px dashed rgba(255, 255, 255, 0.25); pointer-events: none; animation: pulseRing 4s linear infinite; }
+
+        @keyframes pulseRing { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .vinyl-cover { width: 85px; height: 85px; border-radius: 50%; background: radial-gradient(circle, var(--neon-cyan) 0%, var(--neon-pink) 70%, var(--neon-purple) 100%); border: 4px solid #08090d; box-shadow: inset 0 0 10px rgba(0,0,0,0.8), 0 0 15px rgba(255, 0, 122, 0.5); transition: background 0.6s ease; display: flex; justify-content: center; align-items: center; }
+        .vinyl-center-hole { width: 14px; height: 14px; border-radius: 50%; background: #06070B; border: 2px solid rgba(255, 255, 255, 0.4); }
+
+        .player-controls-section { padding: 20px 24px 35px 24px; border-radius: 36px 36px 0 0; background: rgba(14, 16, 24, 0.7); border-top: 1px solid var(--glass-border); }
+        .track-meta-player { text-align: center; margin-bottom: 12px; }
+        .track-meta-player h2 { font-size: 1.25rem; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        #waveform { width: 100%; height: 42px; margin-bottom: 12px; border-radius: 8px; display: block; }
+        
+        .main-controls { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 10px; }
+        .play-btn { width: 68px; height: 68px; border-radius: 50%; background: linear-gradient(135deg, var(--neon-cyan), #00b894); color: var(--bg-dark); display: flex; justify-content: center; align-items: center; box-shadow: 0 0 25px rgba(0, 245, 212, 0.5); transition: var(--transition-bounce); border: none; cursor: pointer; }
+        .play-btn:active { transform: scale(0.9); }
+        .play-btn svg { width: 2em; height: 2em; fill: var(--bg-dark); }
+
+        .volume-container { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.04); padding: 8px 16px; border-radius: 20px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); }
+        .volume-slider { -webkit-appearance: none; flex-grow: 1; height: 5px; background: rgba(255,255,255,0.15); border-radius: 5px; outline: none; }
+        .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--neon-pink); cursor: pointer; box-shadow: 0 0 10px var(--neon-pink); }
+        
+        #audio-upload { display: none; }
+        .loading-text { text-align: center; color: var(--neon-cyan); margin-top: 15px; display: none; font-size: 0.9rem; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="ambient-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <input type="file" id="audio-upload" multiple accept="audio/*">
+
+    <div class="modal-overlay" id="dsp-modal">
+        <div class="dsp-panel">
+            <div class="dsp-header">
+                <h3 class="text-accent">إعدادات الصوت المتقدمة</h3>
+                <button class="icon-btn" id="close-modal">
+                    <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom: 20px;">معالج الصوت الذكي لحماية الأذن والمكبرات</p>
+            <div class="dsp-control"><div class="dsp-label"><span>عزل الضوضاء</span> <span id="val-noise">0%</span></div><input type="range" class="dsp-slider" id="slider-noise" min="0" max="100" value="0"></div>
+            <div class="dsp-control"><div class="dsp-label"><span>نقاء صوت الفنان</span> <span id="val-clarity">0 dB</span></div><input type="range" class="dsp-slider" id="slider-clarity" min="-10" max="10" value="0"></div>
+            <div class="dsp-control"><div class="dsp-label"><span>تضخيم البيس (Bass)</span> <span id="val-bass">0 dB</span></div><input type="range" class="dsp-slider" id="slider-bass" min="-10" max="15" value="0"></div>
+        </div>
+    </div>
+
+    <div id="app-views">
+        <div class="view-screen" id="home-view">
+            <div class="hero-header">
+                <div class="hero-content">
+                    <div class="artist-badge">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                        حساب موثق
+                    </div>
+                    <h1 style="font-size: 2.4rem; margin-bottom: 4px;" class="text-glow">ياسين الكروان</h1>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">استمع لأرقى مقاطع الموسيقى والصوتيات</p>
+                    <div class="action-buttons">
+                        <button class="btn-glow" id="native-permission-btn">
+                            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                            إضافة أغاني جديدة
+                        </button>
+                    </div>
+                    <div id="loading-msg" class="loading-text">جاري الحفظ في ذاكرة التطبيق...</div>
+                </div>
+            </div>
+
+            <div class="track-list" id="local-track-list"></div>
+        </div>
+
+        <div class="view-screen" id="player-view">
+            <div>
+                <div class="drag-handle-container" id="drag-handle-area">
+                    <div class="drag-handle"></div>
+                </div>
+                <div class="player-header">
+                    <button class="icon-btn" id="back-to-home-btn" aria-label="إغلاق الشاشة">
+                        <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+                    </button>
+                    <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-muted); letter-spacing: 1px;">مشغل الموسيقى</div>
+                    <button class="icon-btn" id="options-btn" aria-label="الإعدادات">
+                        <svg viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="vinyl-container">
+                <div class="vinyl-disc" id="vinyl-disc">
+                    <div class="vinyl-cover" id="vinyl-cover">
+                        <div class="vinyl-center-hole"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="player-controls-section">
+                <div class="track-meta-player">
+                    <h2 id="now-playing-title" class="text-glow">اختر أغنية</h2>
+                    <p id="now-playing-artist" style="color: var(--neon-pink); font-size: 0.85rem; font-weight: 600;">ياسين الكروان</p>
+                </div>
+
+                <div style="text-align: center;">
+                    <button class="filter-btn" id="open-dsp-btn">
+                        <svg viewBox="0 0 24 24"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>
+                        معدل الصوت الذكي
+                    </button>
+                </div>
+
+                <canvas id="waveform"></canvas>
+
+                <div class="volume-container">
+                    <svg viewBox="0 0 24 24" style="color: var(--text-muted);"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                    <input type="range" class="volume-slider" id="main-volume" min="0" max="2" step="0.05" value="1">
+                    <span id="vol-text" style="color: var(--neon-cyan); width: 45px; text-align: left; font-size: 0.8rem; font-weight: bold;">100%</span>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 600;">
+                    <span id="time-current">0:00</span>
+                    <span id="time-total">0:00</span>
+                </div>
+                <input type="range" class="volume-slider" id="progress-slider" min="0" max="100" value="0" style="margin-bottom: 12px; height: 6px;">
+
+                <div class="main-controls">
+                    <button class="icon-btn extra-btn" id="shuffle-btn"><svg viewBox="0 0 24 24"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg></button>
+                    <button class="icon-btn" id="prev-btn"><svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
+                    <button class="play-btn" id="play-pause-btn">
+                        <svg viewBox="0 0 24 24" id="play-icon"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                    <button class="icon-btn" id="next-btn"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
+                    <button class="icon-btn extra-btn" id="repeat-btn"><svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const iconPlay = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+        const iconPause = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+        const iconMusic = '<svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>';
+        const iconTrash = '<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
+
+        const visualThemes = [
+            { discCover: 'radial-gradient(circle, #FF007A 0%, #7000FF 70%, #0e0f15 100%)', glow1: 'rgba(255, 0, 122, ', glow2: 'rgba(112, 0, 255, ', waveGrad: ['#FF007A', '#7000FF'], orb1: '#7000FF', orb2: '#FF007A', orb3: '#00F5D4', iconGrad: 'linear-gradient(135deg, #FF007A, #7000FF)' },
+            { discCover: 'radial-gradient(circle, #00F5D4 0%, #FFD700 70%, #0e0f15 100%)', glow1: 'rgba(0, 245, 212, ', glow2: 'rgba(255, 215, 0, ', waveGrad: ['#00F5D4', '#FFD700'], orb1: '#00F5D4', orb2: '#FFD700', orb3: '#FF0055', iconGrad: 'linear-gradient(135deg, #00F5D4, #FFD700)' },
+            { discCover: 'radial-gradient(circle, #FF2A2A 0%, #FF7700 70%, #0e0f15 100%)', glow1: 'rgba(255, 42, 42, ', glow2: 'rgba(255, 119, 0, ', waveGrad: ['#FF2A2A', '#FF7700'], orb1: '#FF2A2A', orb2: '#FF7700', orb3: '#7000FF', iconGrad: 'linear-gradient(135deg, #FF2A2A, #FF7700)' },
+            { discCover: 'radial-gradient(circle, #00FF66 0%, #0088FF 70%, #0e0f15 100%)', glow1: 'rgba(0, 255, 102, ', glow2: 'rgba(0, 136, 255, ', waveGrad: ['#00FF66', '#0088FF'], orb1: '#00FF66', orb2: '#0088FF', orb3: '#FF00D4', iconGrad: 'linear-gradient(135deg, #00FF66, #0088FF)' }
+        ];
+
+        let tracks = [], currentTrackIndex = -1, isPlaying = false;
+        let isRepeat = false, isShuffle = false, isDragging = false; 
+        let audioCtx, audioEl, mediaSource, analyser, gainNode;
+        let bassFilter, clarityFilter, noiseFilter, compressor; 
+        let canvas, canvasCtx, animationId;
+        let currentObjectUrl = null;
+        
+        let currentRotation = 0;
+        let lastBassNorm = 0;
+        let djScratchVelocity = 0;
+
+        const dbName = "KarawanMusicDB_v2";
+        let db;
+
+        function initDB(callback) {
+            const request = indexedDB.open(dbName, 1);
+            request.onupgradeneeded = (e) => {
+                db = e.target.result;
+                if (!db.objectStoreNames.contains('tracks')) {
+                    db.createObjectStore('tracks', { keyPath: 'id', autoIncrement: true });
+                }
+            };
+            request.onsuccess = (e) => { db = e.target.result; if(callback) callback(); };
+            request.onerror = (e) => console.error("Database error: ", e);
+        }
+
+        function saveTracksToDB(files) {
+            const loadingMsg = document.getElementById('loading-msg');
+            loadingMsg.style.display = 'block';
+            const transaction = db.transaction(['tracks'], 'readwrite');
+            const store = transaction.objectStore('tracks');
+            
+            let completed = 0;
+            files.forEach(file => {
+                const req = store.add({ file: file, name: file.name, date: Date.now() });
+                req.onsuccess = () => {
+                    completed++;
+                    if(completed === files.length) {
+                        loadingMsg.style.display = 'none';
+                        loadTracksFromDB();
+                    }
+                };
+                req.onerror = () => {
+                    completed++;
+                    if(completed === files.length) loadingMsg.style.display = 'none';
+                };
+            });
+        }
+
+        function loadTracksFromDB() {
+            if(!db) return;
+            const transaction = db.transaction(['tracks'], 'readonly');
+            const store = transaction.objectStore('tracks');
+            const request = store.getAll();
+            
+            request.onsuccess = () => {
+                const results = request.result || [];
+                tracks = results.map(item => ({
+                    id: item.id,
+                    file: item.file,
+                    title: item.name.replace(/\.[^/.]+$/, ""),
+                    artist: "ياسين الكروان"
+                }));
+                renderTrackList();
+                restoreLastPlayedTrack(); // استرجاع آخر أغنية تم تشغيلها
+            };
+        }
+
+        function deleteTrack(id, index, event) {
+            event.stopPropagation();
+            if(!confirm('هل تريد حذف هذه الأغنية؟')) return;
+
+            const transaction = db.transaction(['tracks'], 'readwrite');
+            const store = transaction.objectStore('tracks');
+            store.delete(id);
+            
+            transaction.oncomplete = () => {
+                if(currentTrackIndex === index) {
+                    if(audioEl) audioEl.pause();
+                    isPlaying = false;
+                    navigateTo('home');
+                } else if(currentTrackIndex > index) {
+                    currentTrackIndex--;
+                }
+                loadTracksFromDB();
+            };
+        }
+
+        window.addEventListener('load', () => initDB(loadTracksFromDB));
+
+        function initAudioEngine() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            audioEl = new Audio();
+            audioEl.crossOrigin = "anonymous";
+            
+            bassFilter = audioCtx.createBiquadFilter(); bassFilter.type = "lowshelf"; bassFilter.frequency.value = 150; bassFilter.gain.value = 0;
+            clarityFilter = audioCtx.createBiquadFilter(); clarityFilter.type = "highshelf"; clarityFilter.frequency.value = 3000; clarityFilter.gain.value = 0;
+            noiseFilter = audioCtx.createBiquadFilter(); noiseFilter.type = "lowpass"; noiseFilter.frequency.value = 20000;
+            
+            compressor = audioCtx.createDynamicsCompressor(); 
+            compressor.threshold.value = -6; compressor.knee.value = 0; compressor.ratio.value = 12; compressor.attack.value = 0.003; compressor.release.value = 0.08;
+            
+            gainNode = audioCtx.createGain();
+            gainNode.gain.value = parseFloat(document.getElementById('main-volume').value);
+
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 128;
+
+            mediaSource = audioCtx.createMediaElementSource(audioEl);
+            mediaSource.connect(bassFilter)
+                       .connect(clarityFilter)
+                       .connect(noiseFilter)
+                       .connect(gainNode)
+                       .connect(compressor)
+                       .connect(analyser)
+                       .connect(audioCtx.destination);
+            
+            canvas = document.getElementById('waveform'); 
+            canvasCtx = canvas.getContext('2d');
+            resizeCanvas();
+            setupAudioEvents();
+            setupMediaSessionHandlers();
+        }
+
+        function resizeCanvas() {
+            if(!canvas) return;
+            canvas.width = canvas.parentElement.clientWidth || 300;
+            canvas.height = canvas.parentElement.clientHeight || 42;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        function updateMediaSession(track) {
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: track.title,
+                    artist: track.artist,
+                    album: 'موسيقى الكروان'
+                });
+            }
+        }
+
+        function setupMediaSessionHandlers() {
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.setActionHandler('play', () => { if (audioCtx) audioCtx.resume(); audioEl.play(); });
+                navigator.mediaSession.setActionHandler('pause', () => audioEl.pause());
+                navigator.mediaSession.setActionHandler('previoustrack', playPrevTrack);
+                navigator.mediaSession.setActionHandler('nexttrack', playNextTrack);
+            }
+        }
+
+        document.getElementById('slider-noise').addEventListener('input', (e) => { 
+            const val = e.target.value; 
+            document.getElementById('val-noise').innerText = val + '%'; 
+            if(noiseFilter) noiseFilter.frequency.value = 20000 - (val * 170); 
+        });
+        document.getElementById('slider-clarity').addEventListener('input', (e) => { 
+            const val = e.target.value; 
+            document.getElementById('val-clarity').innerText = (val > 0 ? '+' : '') + val + ' dB'; 
+            if(clarityFilter) clarityFilter.gain.value = val; 
+        });
+        document.getElementById('slider-bass').addEventListener('input', (e) => { 
+            const val = e.target.value; 
+            document.getElementById('val-bass').innerText = (val > 0 ? '+' : '') + val + ' dB'; 
+            if(bassFilter) bassFilter.gain.value = val; 
+        });
+
+        const dspModal = document.getElementById('dsp-modal');
+        document.getElementById('open-dsp-btn').addEventListener('click', () => dspModal.classList.add('active'));
+        document.getElementById('close-modal').addEventListener('click', () => dspModal.classList.remove('active'));
+        dspModal.addEventListener('click', (e) => { if(e.target === dspModal) dspModal.classList.remove('active'); });
+
+        const nativeBtn = document.getElementById('native-permission-btn');
+        const fileInput = document.getElementById('audio-upload');
+
+        nativeBtn.addEventListener('click', () => {
+            initAudioEngine();
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files).filter(file => file.type.startsWith('audio/'));
+            if(files.length > 0) saveTracksToDB(files);
+        });
+
+        function applyTrackTheme(index) {
+            const theme = visualThemes[index % visualThemes.length];
+            const vinylCover = document.getElementById('vinyl-cover');
+            if (vinylCover) vinylCover.style.background = theme.discCover;
+
+            const orb1 = document.querySelector('.orb-1');
+            const orb2 = document.querySelector('.orb-2');
+            const orb3 = document.querySelector('.orb-3');
+            if (orb1) orb1.style.background = theme.orb1;
+            if (orb2) orb2.style.background = theme.orb2;
+            if (orb3) orb3.style.background = theme.orb3;
+        }
+
+        function renderTrackList() {
+            const container = document.getElementById('local-track-list'); 
+            container.innerHTML = '';
+            
+            if(tracks.length === 0) {
+                 container.innerHTML = '<div style="text-align: center; padding: 50px 20px; color: var(--text-muted);">لا توجد أغاني محفوظة</div>';
+                 return;
+            }
+            
+            tracks.forEach((track, index) => {
+                const theme = visualThemes[index % visualThemes.length];
+                const div = document.createElement('div'); 
+                div.className = 'track-item glass-panel';
+                div.style.animationDelay = `${index * 0.05}s`;
+                div.innerHTML = `
+                    <div class="track-icon" style="background: ${theme.iconGrad}">${iconMusic}</div>
+                    <div class="track-info">
+                        <div class="track-title">${track.title}</div>
+                        <div class="track-artist">محفوظة على جهازك</div>
+                    </div>
+                    <button class="delete-btn" title="حذف">${iconTrash}</button>
+                    <button class="icon-btn" aria-label="تشغيل" style="width:38px; height:38px;">${iconPlay}</button>
+                `;
+                
+                div.querySelector('.delete-btn').addEventListener('click', (e) => deleteTrack(track.id, index, e));
+                div.addEventListener('click', () => { initAudioEngine(); playTrack(index); }); 
+                container.appendChild(div);
+            });
+        }
+
+        function playTrack(index) {
+            if (index < 0 || index >= tracks.length) return;
+            initAudioEngine();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            currentTrackIndex = index; 
+            const track = tracks[index];
+            
+            // حفظ الدليل لآخر أغنية
+            localStorage.setItem('karawan_last_track_index', index);
+            
+            if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+            currentObjectUrl = URL.createObjectURL(track.file);
+
+            audioEl.src = currentObjectUrl; 
+            audioEl.load();
+            
+            applyTrackTheme(index);
+
+            audioEl.play().then(() => {
+                isPlaying = true;
+                document.getElementById('now-playing-title').innerText = track.title;
+                document.getElementById('now-playing-artist').innerText = track.artist;
+                document.getElementById('play-pause-btn').innerHTML = iconPause;
+                
+                updateMediaSession(track);
+                navigateTo('player'); 
+                drawWaveform();
+            }).catch(e => console.error("Play error:", e));
+        }
+
+        // دالة استرجاع آخر أغنية تم الاستماع إليها عند فتح التطبيق
+        function restoreLastPlayedTrack() {
+            const savedIndex = localStorage.getItem('karawan_last_track_index');
+            if (savedIndex !== null && tracks && tracks.length > 0) {
+                const idx = parseInt(savedIndex, 10);
+                if (idx >= 0 && idx < tracks.length) {
+                    currentTrackIndex = idx;
+                    const track = tracks[idx];
+                    document.getElementById('now-playing-title').innerText = track.title;
+                    document.getElementById('now-playing-artist').innerText = track.artist;
+                    applyTrackTheme(idx);
+                }
+            }
+        }
+
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        playPauseBtn.addEventListener('click', () => {
+            if (tracks.length === 0) return;
+            if (!audioEl || !audioEl.src) { 
+                const targetIdx = currentTrackIndex >= 0 ? currentTrackIndex : 0;
+                playTrack(targetIdx); 
+                return; 
+            }
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+            
+            if (isPlaying) { audioEl.pause(); } else { audioEl.play(); }
+        });
+
+        document.getElementById('back-to-home-btn').addEventListener('click', () => navigateTo('home'));
+        document.getElementById('options-btn').addEventListener('click', () => dspModal.classList.add('active'));
+
+        // إمكانية الإغلاق بالسحب لأسفل
+        let touchStartY = 0;
+        const dragArea = document.getElementById('drag-handle-area');
+        dragArea.addEventListener('touchstart', (e) => touchStartY = e.touches[0].clientY);
+        dragArea.addEventListener('touchmove', (e) => {
+            if (e.touches[0].clientY - touchStartY > 60) navigateTo('home');
+        });
+
+        function playNextTrack() {
+            if (tracks.length === 0) return;
+            if (isShuffle) {
+                playTrack(Math.floor(Math.random() * tracks.length));
+            } else {
+                playTrack((currentTrackIndex + 1) % tracks.length);
+            }
+        }
+
+        function playPrevTrack() {
+            if (tracks.length === 0) return;
+            playTrack((currentTrackIndex - 1 + tracks.length) % tracks.length);
+        }
+
+        document.getElementById('next-btn').addEventListener('click', playNextTrack);
+        document.getElementById('prev-btn').addEventListener('click', playPrevTrack);
+
+        document.getElementById('shuffle-btn').addEventListener('click', function() { 
+            isShuffle = !isShuffle; this.classList.toggle('active', isShuffle); 
+        });
+        document.getElementById('repeat-btn').addEventListener('click', function() { 
+            isRepeat = !isRepeat; this.classList.toggle('active', isRepeat); 
+        });
+
+        document.getElementById('main-volume').addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            if(gainNode) gainNode.gain.value = val;
+            document.getElementById('vol-text').innerText = Math.round(val * 100) + '%';
+        });
+
+        function setupAudioEvents() {
+            const progressSlider = document.getElementById('progress-slider');
+            
+            progressSlider.addEventListener('input', (e) => {
+                isDragging = true;
+                if(audioEl.duration) {
+                    const seekTime = (e.target.value / 100) * audioEl.duration;
+                    document.getElementById('time-current').innerText = formatTime(seekTime);
+                }
+            });
+
+            progressSlider.addEventListener('change', (e) => {
+                if(audioEl.duration) audioEl.currentTime = (e.target.value / 100) * audioEl.duration;
+                isDragging = false;
+            });
+
+            audioEl.addEventListener('play', () => {
+                isPlaying = true;
+                if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+                playPauseBtn.innerHTML = iconPause;
+                drawWaveform();
+            });
+
+            audioEl.addEventListener('pause', () => {
+                isPlaying = false;
+                if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+                playPauseBtn.innerHTML = iconPlay;
+            });
+
+            audioEl.addEventListener('timeupdate', () => {
+                if (!isDragging && audioEl.duration) { 
+                    progressSlider.value = (audioEl.currentTime / audioEl.duration) * 100 || 0;
+                    document.getElementById('time-current').innerText = formatTime(audioEl.currentTime);
+                }
+            });
+            
+            audioEl.addEventListener('loadedmetadata', () => {
+                document.getElementById('time-total').innerText = formatTime(audioEl.duration);
+            });
+
+            audioEl.addEventListener('ended', () => {
+                if (isRepeat) { playTrack(currentTrackIndex); } else { playNextTrack(); } 
+            });
+        }
+
+        function formatTime(seconds) {
+            if(isNaN(seconds)) return "0:00";
+            const min = Math.floor(seconds / 60); 
+            const sec = Math.floor(seconds % 60);
+            return `${min}:${sec < 10 ? '0' + sec : sec}`;
+        }
+
+        function navigateTo(view) {
+            const playerView = document.getElementById('player-view');
+            if(view === 'player') { 
+                playerView.classList.add('active');
+                setTimeout(resizeCanvas, 400); 
+            } else { 
+                playerView.classList.remove('active');
+            }
+        }
+
+        function drawWaveform() {
+            if (!isPlaying) return;
+            if (animationId) cancelAnimationFrame(animationId);
+            
+            animationId = requestAnimationFrame(drawWaveform);
+            const bufferLength = analyser.frequencyBinCount; 
+            const dataArray = new Uint8Array(bufferLength);
+            
+            analyser.getByteFrequencyData(dataArray);
+            canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            let bassSum = 0;
+            for(let i = 0; i < 6; i++) bassSum += dataArray[i];
+            const bassNorm = (bassSum / 6) / 255;
+
+            let midSum = 0;
+            for(let i = 6; i < 20; i++) midSum += dataArray[i];
+            const midNorm = (midSum / 14) / 255;
+
+            const bassDelta = bassNorm - lastBassNorm;
+            lastBassNorm = bassNorm;
+
+            if (bassDelta > 0.2 && bassNorm > 0.5) {
+                djScratchVelocity = (bassDelta * 20); 
+            } else {
+                djScratchVelocity *= 0.88;
+            }
+
+            const dynamicSpeed = 0.8 + (bassNorm * 5) + djScratchVelocity;
+            currentRotation = (currentRotation + dynamicSpeed) % 360;
+
+            const theme = visualThemes[currentTrackIndex % visualThemes.length] || visualThemes[0];
+            const vinylDisc = document.getElementById('vinyl-disc');
+            
+            if (vinylDisc && isPlaying) {
+                const scale = 1 + (bassNorm * 0.16);
+                const glowSize1 = 20 + (bassNorm * 60);
+                const glowSize2 = 10 + (midNorm * 40);
+                
+                vinylDisc.style.transform = `rotate(${currentRotation.toFixed(2)}deg) scale(${scale.toFixed(3)})`;
+                vinylDisc.style.boxShadow = `0 20px 50px rgba(0,0,0,0.9), 0 0 ${glowSize1}px ${theme.glow1}0.8), 0 0 ${glowSize2}px ${theme.glow2}0.6)`;
+                vinylDisc.style.borderColor = `${theme.glow1}0.8)`;
+            }
+
+            const barWidth = canvas.width / bufferLength; 
+            let x = 0;
+            for(let i = 0; i < bufferLength; i++) {
+                const barHeight = (dataArray[i] / 255) * canvas.height;
+                const gradient = canvasCtx.createLinearGradient(0, canvas.height, 0, 0);
+                gradient.addColorStop(0, theme.waveGrad[0]);
+                gradient.addColorStop(1, theme.waveGrad[1]);
+                
+                canvasCtx.fillStyle = gradient;
+                canvasCtx.fillRect(x, canvas.height - barHeight, barWidth - 1.5, barHeight);
+                x += barWidth;
+            }
+        }
+
+        // --- التحكم بالسحب (Swipe Gestures) مع انيميشن سلس ---
+        (function setupSwipeControls() {
+            const vinylContainer = document.querySelector('.vinyl-container');
+            if (!vinylContainer) return;
+
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let isSwiping = false;
+
+            vinylContainer.addEventListener('touchstart', (e) => {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                isSwiping = true;
+                vinylContainer.style.transition = 'none';
+            }, { passive: true });
+
+            vinylContainer.addEventListener('touchmove', (e) => {
+                if (!isSwiping) return;
+                const diffX = e.touches[0].clientX - touchStartX;
+                const diffY = e.touches[0].clientY - touchStartY;
+
+                // التحقق من حركة السحب الأفقي
+                if (Math.abs(diffX) > Math.abs(diffY)) {
+                    vinylContainer.style.transform = `translateX(${diffX}px) rotate(${diffX * 0.04}deg)`;
+                    vinylContainer.style.opacity = `${1 - Math.abs(diffX) / 350}`;
+                }
+            }, { passive: true });
+
+            vinylContainer.addEventListener('touchend', (e) => {
+                if (!isSwiping) return;
+                isSwiping = false;
+                const diffX = e.changedTouches[0].clientX - touchStartX;
+                
+                vinylContainer.style.transition = 'all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+
+                // سحب يمين -> الأغنية التالية
+                if (diffX > 65) {
+                    vinylContainer.style.transform = 'translateX(120px) rotate(10deg)';
+                    vinylContainer.style.opacity = '0';
+                    setTimeout(() => {
+                        playNextTrack();
+                        vinylContainer.style.transform = 'translateX(-120px) rotate(-10deg)';
+                        setTimeout(() => {
+                            vinylContainer.style.transform = 'translateX(0) rotate(0deg)';
+                            vinylContainer.style.opacity = '1';
+                        }, 50);
+                    }, 150);
+                } 
+                // سحب شمال -> الأغنية السابقة
+                else if (diffX < -65) {
+                    vinylContainer.style.transform = 'translateX(-120px) rotate(-10deg)';
+                    vinylContainer.style.opacity = '0';
+                    setTimeout(() => {
+                        playPrevTrack();
+                        vinylContainer.style.transform = 'translateX(120px) rotate(10deg)';
+                        setTimeout(() => {
+                            vinylContainer.style.transform = 'translateX(0) rotate(0deg)';
+                            vinylContainer.style.opacity = '1';
+                        }, 50);
+                    }, 150);
+                } 
+                // إرجاع الأسطوانة لمكانها الأصلي إذا لم يكتمل السحب
+                else {
+                    vinylContainer.style.transform = 'translateX(0) rotate(0deg)';
+                    vinylContainer.style.opacity = '1';
+                }
+            }, { passive: true });
+        })();
+    </script>
+</body>
+</html>

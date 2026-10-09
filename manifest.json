@@ -1,0 +1,21 @@
+{
+  "name": "موسيقى الكروان | Yassin El-Karawan",
+  "short_name": "الكروان",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#06070B",
+  "theme_color": "#FF007A",
+  "description": "تطبيق مشغل موسيقى PWA يعمل بدون إنترنت وفي الخلفية",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
